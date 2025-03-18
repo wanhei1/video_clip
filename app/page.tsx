@@ -14,7 +14,7 @@ export default function Home() {
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="icon" asChild>
-              <a href="https://github.com" target="_blank" rel="noopener noreferrer" aria-label="GitHub">
+              <a href="https://github.com/wanhei1/video_clip" target="_blank" rel="noopener noreferrer" aria-label="GitHub">
                 <Github className="h-4 w-4" />
               </a>
             </Button>
