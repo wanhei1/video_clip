@@ -9,7 +9,7 @@ export default function Home() {
       <div className="mx-auto max-w-6xl">
         <header className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-zinc-800 dark:text-zinc-200 md:text-4xl">ClipApp</h1>
+            <h1 className="text-3xl font-bold tracking-tight text-zinc-800 dark:text-zinc-200 md:text-4xl">Video Clipper</h1>
             <p className="text-zinc-600 dark:text-zinc-400">Record timestamps and extract clips with precision</p>
           </div>
           <div className="flex items-center gap-2">
