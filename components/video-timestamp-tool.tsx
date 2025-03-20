@@ -597,6 +597,10 @@ export function VideoTimestampTool() {
             <TabsTrigger value="record">Record</TabsTrigger>
             <TabsTrigger value="extract">Extract</TabsTrigger>
             <TabsTrigger value="export">Export</TabsTrigger>
+            <TabsTrigger value="ai">AI Tools</TabsTrigger>
+            <TabsTrigger value="batch">Batch</TabsTrigger>
+            <TabsTrigger value="templates">Templates</TabsTrigger>
+            <TabsTrigger value="team">Team</TabsTrigger>
           </TabsList>
 
           <TooltipProvider>

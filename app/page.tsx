@@ -110,13 +110,13 @@ export default function Home() {
             gradient="from-blue-500 to-indigo-500"
           />
           <FeatureCard
-            icon={<Scissors className="h-6 w-6 text-purple-600 dark:text-purple-400" />}
+            icon={<div className="h-6 w-6 text-purple-600 dark:text-purple-400"><Scissors /></div>}
             title="High-Quality Exports"
             description="Extract clips in multiple formats with our premium quality preservation technology."
             gradient="from-indigo-500 to-purple-500"
           />
           <FeatureCard
-            icon={<Users className="h-6 w-6 text-pink-600 dark:text-pink-400" />}
+            icon={<div className="h-6 w-6 text-pink-600 dark:text-pink-400"><Users /></div>}
             title="Team Collaboration"
             description="Share projects with your team and collaborate on video editing in real-time."
             gradient="from-purple-500 to-pink-500"

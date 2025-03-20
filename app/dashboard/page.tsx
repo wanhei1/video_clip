@@ -13,13 +13,18 @@ import { VideoTimestampTool } from "@/components/video-timestamp-tool"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { SubscriptionBadge } from "@/components/subscription-badge"
 import { UserNav } from "@/components/user-nav"
+import { TeamCollaboration } from "@/components/team-collaboration"
+import { AIEditing } from "@/components/ai-editing"
+import { BatchProcessing } from "@/components/batch-processing"
+import { CustomTemplates } from "@/components/custom-templates"
+import { Settings } from "@/components/settings"
 import {
   Crown,
   Users,
   Zap,
   Clock,
   FileVideo,
-  Settings,
+  Settings as SettingsIcon,
   BarChart3,
   Sparkles,
   Layers,
@@ -156,6 +161,9 @@ export default function DashboardPage() {
                     variant="outline"
                     size="sm"
                     className="group hover:bg-indigo-50 hover:text-indigo-700 hover:border-indigo-200 dark:hover:bg-indigo-900/30 dark:hover:text-indigo-300 dark:hover:border-indigo-800 transition-colors"
+                    onClick={() => {
+                      router.push("/tutorial");
+                    }}
                   >
                     <Lightbulb className="mr-1.5 h-3.5 w-3.5 group-hover:text-indigo-500 dark:group-hover:text-indigo-400" />
                     <span>Tutorial</span>
@@ -165,6 +173,12 @@ export default function DashboardPage() {
                     variant="outline"
                     size="sm"
                     className="group hover:bg-purple-50 hover:text-purple-700 hover:border-purple-200 dark:hover:bg-purple-900/30 dark:hover:text-purple-300 dark:hover:border-purple-800 transition-colors"
+                    onClick={() => {
+                      const templatesTab = document.querySelector('[value="templates"]') as HTMLElement;
+                      if (templatesTab) {
+                        templatesTab.click();
+                      }
+                    }}
                   >
                     <Compass className="mr-1.5 h-3.5 w-3.5 group-hover:text-purple-500 dark:group-hover:text-purple-400" />
                     <span>Explore Templates</span>
@@ -193,6 +207,40 @@ export default function DashboardPage() {
                     <span>History</span>
                   </TabsTrigger>
                   {user?.subscriptionTier !== "free" && (
+                    <>
+                      <TabsTrigger
+                        value="ai-tools"
+                        className="flex items-center gap-1.5 data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-900 data-[state=active]:text-indigo-600 dark:data-[state=active]:text-indigo-400 data-[state=active]:shadow-sm rounded-md transition-all"
+                      >
+                        <Wand2 className="h-3.5 w-3.5" />
+                        <span>AI Tools</span>
+                      </TabsTrigger>
+                      <TabsTrigger
+                        value="batch"
+                        className="flex items-center gap-1.5 data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-900 data-[state=active]:text-indigo-600 dark:data-[state=active]:text-indigo-400 data-[state=active]:shadow-sm rounded-md transition-all"
+                      >
+                        <Layers className="h-3.5 w-3.5" />
+                        <span>Batch</span>
+                      </TabsTrigger>
+                    </>
+                  )}
+                  <TabsTrigger
+                    value="templates"
+                    className="flex items-center gap-1.5 data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-900 data-[state=active]:text-indigo-600 dark:data-[state=active]:text-indigo-400 data-[state=active]:shadow-sm rounded-md transition-all"
+                  >
+                    <Palette className="h-3.5 w-3.5" />
+                    <span>Templates</span>
+                  </TabsTrigger>
+                  {user?.subscriptionTier === "team" && (
+                    <TabsTrigger
+                      value="team"
+                      className="flex items-center gap-1.5 data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-900 data-[state=active]:text-indigo-600 dark:data-[state=active]:text-indigo-400 data-[state=active]:shadow-sm rounded-md transition-all"
+                    >
+                      <Users className="h-3.5 w-3.5" />
+                      <span>Team</span>
+                    </TabsTrigger>
+                  )}
+                  {user?.subscriptionTier !== "free" && (
                     <TabsTrigger
                       value="analytics"
                       className="flex items-center gap-1.5 data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-900 data-[state=active]:text-indigo-600 dark:data-[state=active]:text-indigo-400 data-[state=active]:shadow-sm rounded-md transition-all"
@@ -205,7 +253,7 @@ export default function DashboardPage() {
                     value="settings"
                     className="flex items-center gap-1.5 data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-900 data-[state=active]:text-indigo-600 dark:data-[state=active]:text-indigo-400 data-[state=active]:shadow-sm rounded-md transition-all"
                   >
-                    <Settings className="h-3.5 w-3.5" />
+                    <SettingsIcon className="h-3.5 w-3.5" />
                     <span>Settings</span>
                   </TabsTrigger>
                 </TabsList>
@@ -235,7 +283,10 @@ export default function DashboardPage() {
                         <Button
                           variant="outline"
                           className="mt-6 group hover:bg-indigo-50 hover:text-indigo-700 hover:border-indigo-200 dark:hover:bg-indigo-900/30 dark:hover:text-indigo-300 dark:hover:border-indigo-800 transition-colors"
-                          onClick={() => document.querySelector('[data-value="editor"]')?.click()}
+                          onClick={() => {
+                            const editorTab = document.querySelector('[data-value="editor"]') as HTMLElement;
+                            editorTab?.click();
+                          }}
                         >
                           <FileVideo className="mr-2 h-4 w-4 group-hover:text-indigo-500 dark:group-hover:text-indigo-400" />
                           <span>Go to Editor</span>
@@ -272,111 +323,30 @@ export default function DashboardPage() {
                   </TabsContent>
                 )}
 
+                {user?.subscriptionTier === "team" && (
+                  <TabsContent value="team" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
+                    <TeamCollaboration />
+                  </TabsContent>
+                )}
+
+                {user?.subscriptionTier !== "free" && (
+                  <TabsContent value="ai-tools" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
+                    <AIEditing />
+                  </TabsContent>
+                )}
+
+                {user?.subscriptionTier !== "free" && (
+                  <TabsContent value="batch" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
+                    <BatchProcessing />
+                  </TabsContent>
+                )}
+
+                <TabsContent value="templates" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
+                  <CustomTemplates />
+                </TabsContent>
+
                 <TabsContent value="settings" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
-                  <Card className="border-zinc-200/50 bg-white/90 backdrop-blur-sm shadow-sm dark:border-zinc-800/50 dark:bg-zinc-900/90 overflow-hidden">
-                    <div className="absolute inset-0 rounded-lg p-[1px] bg-gradient-to-r from-indigo-500/10 to-purple-500/10 pointer-events-none"></div>
-                    <CardHeader>
-                      <CardTitle>Editor Settings</CardTitle>
-                      <CardDescription>Customize your video editing experience.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-6">
-                        <div>
-                          <h3 className="text-lg font-medium mb-3">Video Preferences</h3>
-                          <div className="grid gap-4 md:grid-cols-2">
-                            <div className="space-y-2">
-                              <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                                Default Export Format
-                              </label>
-                              <div className="flex items-center space-x-4">
-                                <div className="flex items-center space-x-2">
-                                  <input
-                                    type="radio"
-                                    id="mp4"
-                                    name="format"
-                                    className="text-indigo-600"
-                                    defaultChecked
-                                  />
-                                  <label htmlFor="mp4" className="text-sm">
-                                    MP4
-                                  </label>
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                  <input type="radio" id="webm" name="format" className="text-indigo-600" />
-                                  <label htmlFor="webm" className="text-sm">
-                                    WebM
-                                  </label>
-                                </div>
-                              </div>
-                            </div>
-
-                            <div className="space-y-2">
-                              <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                                Timestamp Precision
-                              </label>
-                              <select className="w-full rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-sm">
-                                <option>Milliseconds (0.001s)</option>
-                                <option>Centiseconds (0.01s)</option>
-                                <option>Deciseconds (0.1s)</option>
-                                <option>Seconds (1s)</option>
-                              </select>
-                            </div>
-                          </div>
-                        </div>
-
-                        <Separator />
-
-                        <div>
-                          <h3 className="text-lg font-medium mb-3">Theme & Appearance</h3>
-                          <div className="grid gap-4 md:grid-cols-2">
-                            <div className="space-y-2">
-                              <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                                Color Theme
-                              </label>
-                              <div className="flex flex-wrap gap-2">
-                                <button className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 ring-2 ring-offset-2 ring-indigo-500 dark:ring-offset-zinc-900"></button>
-                                <button className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-cyan-600"></button>
-                                <button className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500 to-green-600"></button>
-                                <button className="w-8 h-8 rounded-full bg-gradient-to-br from-rose-500 to-pink-600"></button>
-                                <button className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-500 to-orange-600"></button>
-                              </div>
-                            </div>
-
-                            <div className="space-y-2">
-                              <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                                Interface Density
-                              </label>
-                              <div className="flex items-center space-x-4">
-                                <div className="flex items-center space-x-2">
-                                  <input type="radio" id="compact" name="density" className="text-indigo-600" />
-                                  <label htmlFor="compact" className="text-sm">
-                                    Compact
-                                  </label>
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                  <input
-                                    type="radio"
-                                    id="comfortable"
-                                    name="density"
-                                    className="text-indigo-600"
-                                    defaultChecked
-                                  />
-                                  <label htmlFor="comfortable" className="text-sm">
-                                    Comfortable
-                                  </label>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                    <CardFooter className="flex justify-end border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50 px-6 py-4">
-                      <Button className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white border-0">
-                        Save Settings
-                      </Button>
-                    </CardFooter>
-                  </Card>
+                  <Settings />
                 </TabsContent>
               </Tabs>
             </CardContent>
@@ -560,7 +530,10 @@ function QuickActionsCard() {
           <Button
             variant="outline"
             className="h-auto flex-col py-4 justify-start items-center group hover:bg-indigo-50 hover:text-indigo-700 hover:border-indigo-200 dark:hover:bg-indigo-900/30 dark:hover:text-indigo-300 dark:hover:border-indigo-800 transition-colors"
-            onClick={() => document.querySelector('[data-value="editor"]')?.click()}
+            onClick={() => {
+              const editorTab = document.querySelector('[data-value="editor"]') as HTMLElement;
+              editorTab?.click();
+            }}
           >
             <FileVideo className="h-5 w-5 mb-1 group-hover:text-indigo-500 dark:group-hover:text-indigo-400 transition-colors" />
             <span className="text-xs">Upload Video</span>

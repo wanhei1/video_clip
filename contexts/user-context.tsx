@@ -11,6 +11,7 @@ interface User {
   email: string | null
   image?: string | null
   subscriptionTier: SubscriptionTier
+  isPro?: boolean
 }
 
 interface UserContextType {
@@ -32,10 +33,11 @@ export function UserProvider({ children }: { children: ReactNode }) {
     if (session?.user) {
       setUser({
         id: session.user.id || "user-id",
-        name: session.user.name,
-        email: session.user.email,
-        image: session.user.image,
+        name: session.user.name || null,
+        email: session.user.email || null,
+        image: session.user.image || null,
         subscriptionTier: (session.user.subscriptionTier as SubscriptionTier) || "free",
+        isPro: session.user.subscriptionTier === "pro" || session.user.subscriptionTier === "team"
       })
     } else {
       setUser(null)

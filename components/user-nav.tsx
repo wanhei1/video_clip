@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { SubscriptionBadge } from "@/components/subscription-badge"
 import { useRouter } from "next/navigation"
-import { LogOut, User, Settings, CreditCard } from "lucide-react"
+import { LogOut, User, Settings, CreditCard, Sparkles } from "lucide-react"
 
 export function UserNav() {
   const { user, logout } = useUser()
@@ -76,13 +76,17 @@ export function UserNav() {
             <User className="mr-2 h-4 w-4" />
             <span>Dashboard</span>
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => router.push("/account/settings")} className="cursor-pointer">
+          <DropdownMenuItem onClick={() => router.push("/dashboard")} className="cursor-pointer">
             <Settings className="mr-2 h-4 w-4" />
             <span>Settings</span>
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => router.push("/account/billing")} className="cursor-pointer">
             <CreditCard className="mr-2 h-4 w-4" />
             <span>Billing</span>
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => router.push("/features")} className="cursor-pointer">
+            <Sparkles className="mr-2 h-4 w-4" />
+            <span>Features</span>
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />

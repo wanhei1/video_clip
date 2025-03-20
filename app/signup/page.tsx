@@ -14,9 +14,11 @@ import Link from "next/link"
 import { Loader2, AlertCircle } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
-export default function LoginPage() {
+export default function SignupPage() {
+  const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
@@ -26,33 +28,38 @@ export default function LoginPage() {
     setIsLoading(true)
     setError(null)
 
+    // 密码验证
+    if (password !== confirmPassword) {
+      setError("Passwords do not match")
+      setIsLoading(false)
+      return
+    }
+
     try {
-      const result = await signIn("credentials", {
-        email,
-        password,
-        redirect: false,
-      })
+      // 模拟注册成功，实际项目中应该调用API创建用户
+      setTimeout(async () => {
+        // 注册成功后自动登录
+        const result = await signIn("credentials", {
+          email,
+          password,
+          redirect: false,
+        })
 
-      if (result?.error) {
-        setError(result.error)
-        setIsLoading(false)
-        return
-      }
+        if (result?.error) {
+          setError(result.error)
+          setIsLoading(false)
+          return
+        }
 
-      if (result?.ok) {
-        router.push("/dashboard")
-      }
+        if (result?.ok) {
+          router.push("/dashboard")
+        }
+      }, 1000); // 模拟API延迟
     } catch (error) {
-      console.error("Login error:", error)
+      console.error("Signup error:", error)
       setError("An unexpected error occurred. Please try again.")
       setIsLoading(false)
     }
-  }
-
-  // Function to auto-fill demo credentials
-  const fillDemoCredentials = (demoEmail: string) => {
-    setEmail(demoEmail)
-    setPassword("password123")
   }
 
   return (
@@ -62,8 +69,8 @@ export default function LoginPage() {
           <div className="flex justify-center mb-4">
             <BrandLogo size="lg" />
           </div>
-          <CardTitle className="text-2xl text-center">Welcome back</CardTitle>
-          <CardDescription className="text-center">Sign in to your account to continue</CardDescription>
+          <CardTitle className="text-2xl text-center">Create an account</CardTitle>
+          <CardDescription className="text-center">Sign up to get started with Video Clipper</CardDescription>
         </CardHeader>
 
         <CardContent className="space-y-4">
@@ -76,6 +83,18 @@ export default function LoginPage() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
+              <Label htmlFor="name">Full Name</Label>
+              <Input
+                id="name"
+                type="text"
+                placeholder="John Doe"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+              />
+            </div>
+            
+            <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
@@ -86,6 +105,7 @@ export default function LoginPage() {
                 required
               />
             </div>
+            
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
               <Input
@@ -96,65 +116,42 @@ export default function LoginPage() {
                 required
               />
             </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="confirm-password">Confirm Password</Label>
+              <Input
+                id="confirm-password"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+              />
+            </div>
 
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Signing in...
+                  Creating account...
                 </>
               ) : (
-                "Sign In"
+                "Sign Up"
               )}
             </Button>
           </form>
-
-          <div className="text-center text-sm pt-2">
-            <p className="font-medium">Demo accounts (click to auto-fill):</p>
-            <div className="grid grid-cols-3 gap-2 mt-2 text-xs">
-              <button
-                type="button"
-                onClick={() => fillDemoCredentials("free@example.com")}
-                className="p-2 rounded bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors text-left"
-              >
-                <div className="font-medium">Free User</div>
-                <div>free@example.com</div>
-                <div>password123</div>
-              </button>
-              <button
-                type="button"
-                onClick={() => fillDemoCredentials("pro@example.com")}
-                className="p-2 rounded bg-indigo-100 dark:bg-indigo-900/30 hover:bg-indigo-200 dark:hover:bg-indigo-800/30 transition-colors text-left"
-              >
-                <div className="font-medium">Pro User</div>
-                <div>pro@example.com</div>
-                <div>password123</div>
-              </button>
-              <button
-                type="button"
-                onClick={() => fillDemoCredentials("team@example.com")}
-                className="p-2 rounded bg-purple-100 dark:bg-purple-900/30 hover:bg-purple-200 dark:hover:bg-purple-800/30 transition-colors text-left"
-              >
-                <div className="font-medium">Team User</div>
-                <div>team@example.com</div>
-                <div>password123</div>
-              </button>
-            </div>
-          </div>
         </CardContent>
         <CardFooter className="flex justify-center">
           <div className="text-center text-sm">
-            Don't have an account?{" "}
+            Already have an account?{" "}
             <Link
-              href="/signup"
+              href="/login"
               className="text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300 font-medium"
             >
-              Sign up
+              Sign in
             </Link>
           </div>
         </CardFooter>
       </Card>
     </div>
   )
-}
-
+} 
