@@ -24,9 +24,17 @@ export const metadata: Metadata = {
   title: "Video Clipper - Professional Video Timestamp Tool",
   description: "Record timestamps and extract high-quality clips from your videos with precision",
   icons: {
-    icon: "/favicon.ico",
+    icon: [
+      { url: "/favicon.ico" },
+      { url: "/icon-192x192.svg", sizes: "192x192" },
+      { url: "/icon-512x512.svg", sizes: "512x512" }
+    ],
+    apple: "/apple-touch-icon.svg",
+    shortcut: "/favicon.ico"
   },
-    generator: 'v0.dev'
+  manifest: "/manifest.json",
+  themeColor: "#6366f1",
+  generator: 'v0.dev'
 }
 
 export default function RootLayout({
