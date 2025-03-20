@@ -2,15 +2,11 @@
 
 import { useState, useRef, useCallback, useEffect, type ChangeEvent } from "react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { VideoPlayer } from "./video-player"
-import { TimestampList } from "./timestamp-list"
 import {
-  Upload,
   FileVideo,
   Scissors,
-  Clock,
   FileJson,
   FileSpreadsheet,
   Download,
@@ -34,8 +30,13 @@ import { Progress } from "./ui/progress"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip"
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert"
-import { Badge } from "./ui/badge"
 import { Separator } from "./ui/separator"
+
+// Add this at the top of the file, after the imports
+import { useUser } from "@/contexts/user-context"
+import { PremiumFeature } from "@/components/premium-feature"
+import { VideoPlayer } from "@/components/video-player"
+import { TimestampList } from "@/components/timestamp-list"
 
 // Extend HTMLVideoElement type to include captureStream method
 declare global {
@@ -52,7 +53,10 @@ type Timestamp = {
   label: string
 }
 
+// Inside the VideoTimestampTool component, add this near the top
 export function VideoTimestampTool() {
+  const { user, hasAccess } = useUser()
+
   const [videoSrc, setVideoSrc] = useState<string | null>(null)
   const [videoName, setVideoName] = useState<string>("")
   const [timestamps, setTimestamps] = useState<Timestamp[]>([])
@@ -362,8 +366,18 @@ export function VideoTimestampTool() {
     }
   }, [selectedTimestamp, timestamps, clipName])
 
-  // Extract all clips with timestamps
+  // Modify the extractAllClips function to check for Pro access
   const extractAllClips = useCallback(async () => {
+    // Check if user has Pro access
+    if (!hasAccess("pro")) {
+      toast({
+        title: "Premium Feature",
+        description: "Batch clip extraction is available on the Pro plan or higher.",
+        variant: "destructive",
+      })
+      return
+    }
+
     const clipsToExtract = timestamps.filter((t) => t.endTime !== null)
 
     if (clipsToExtract.length === 0) {
@@ -375,12 +389,11 @@ export function VideoTimestampTool() {
       return
     }
 
-    // Reset cancel flag
-    extractionCancelRef.current = false
-    setIsExtractingAll(true)
-    setExtractionProgress({ current: 0, total: clipsToExtract.length })
-
+    // Rest of the existing function...
     try {
+      setIsExtractingAll(true)
+      extractionCancelRef.current = false
+
       for (let i = 0; i < clipsToExtract.length; i++) {
         // Check if cancelled
         if (extractionCancelRef.current) {
@@ -481,7 +494,7 @@ export function VideoTimestampTool() {
     } finally {
       setIsExtractingAll(false)
     }
-  }, [timestamps, videoName, formatTimeForFilename, exportFormat])
+  }, [timestamps, videoName, formatTimeForFilename, exportFormat, hasAccess])
 
   const cancelExtraction = useCallback(() => {
     extractionCancelRef.current = true
@@ -573,6 +586,7 @@ export function VideoTimestampTool() {
     setCurrentVideoTime(time)
   }, [])
 
+  // Modify the return JSX to implement feature gating
   return (
     <div
       className={`relative ${isDragging ? 'after:absolute after:inset-0 after:bg-zinc-950/20 after:backdrop-blur-sm after:z-50 after:border-2 after:border-dashed after:border-zinc-400 after:rounded-lg after:flex after:items-center after:justify-center after:text-zinc-100 after:text-xl after:pointer-events-none after:content-["Drop_video_file_here"]' : ""}`}
@@ -599,127 +613,92 @@ export function VideoTimestampTool() {
         </div>
 
         <TabsContent value="record" className="mt-0">
-          <div className="grid gap-6 md:grid-cols-3">
-            <Card className="md:col-span-2 border-zinc-200 bg-white/90 backdrop-blur-sm shadow-sm dark:border-zinc-800 dark:bg-zinc-900/90">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-zinc-800 dark:text-zinc-200 flex items-center justify-between">
-                  <span>{videoName || "Video Player"}</span>
-                  {videoSrc && (
-                    <Badge variant="outline" className="ml-2 text-xs font-normal">
-                      {currentVideoTime.toFixed(2)}s
-                    </Badge>
-                  )}
-                </CardTitle>
-                <CardDescription className="text-zinc-600 dark:text-zinc-400">
-                  {videoSrc ? "Click the buttons below to record timestamps" : "Import a video to get started"}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {videoSrc ? (
-                  <VideoPlayer
-                    src={videoSrc}
-                    ref={videoRef}
-                    timestamps={timestamps}
-                    activeTimestamp={activeTimestamp}
-                    onTimeUpdate={handleTimeUpdate}
+          <Card className="border-zinc-200 bg-white/90 backdrop-blur-sm shadow-sm dark:border-zinc-800 dark:bg-zinc-900/90">
+            <CardHeader>
+              <CardTitle className="text-zinc-800 dark:text-zinc-200">Record Timestamps</CardTitle>
+              <CardDescription className="text-zinc-600 dark:text-zinc-400">
+                Upload a video and record timestamps for important moments
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {!videoSrc ? (
+                <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-zinc-300 dark:border-zinc-700 p-8">
+                  <FileVideo className="mb-4 h-10 w-10 text-zinc-500 dark:text-zinc-400" />
+                  <p className="text-sm text-zinc-600 dark:text-zinc-400">No video selected</p>
+                  <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-500 text-center max-w-md">
+                    Upload a video to start recording timestamps. You can also drag and drop a video file here.
+                  </p>
+                  <Button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="mt-4 bg-indigo-600 hover:bg-indigo-700 text-white dark:bg-indigo-700 dark:hover:bg-indigo-600"
+                  >
+                    <FileVideo className="mr-2 h-4 w-4" />
+                    Select Video
+                  </Button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="video/*"
+                    onChange={handleFileChange}
+                    className="hidden"
                   />
-                ) : (
-                  <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-zinc-300 dark:border-zinc-700 p-12">
-                    <FileVideo className="mb-4 h-12 w-12 text-zinc-500 dark:text-zinc-400" />
-                    <p className="mb-2 text-sm text-zinc-600 dark:text-zinc-400">No video selected</p>
-                    <p className="mb-4 text-xs text-zinc-500 dark:text-zinc-500 text-center max-w-xs">
-                      Drag & drop a video file here, or click the button below to browse
-                    </p>
-                    <Input
-                      id="video-upload"
-                      type="file"
-                      accept="video/*"
-                      className="hidden"
-                      onChange={handleFileChange}
-                      ref={fileInputRef}
+                </div>
+              ) : (
+                <>
+                  <div className="space-y-4">
+                    <VideoPlayer
+                      ref={videoRef}
+                      src={videoSrc}
+                      timestamps={timestamps}
+                      activeTimestamp={activeTimestamp}
+                      onTimeUpdate={handleTimeUpdate}
                     />
-                    <label htmlFor="video-upload">
-                      <Button variant="secondary" className="mt-2" asChild>
-                        <span>
-                          <Upload className="mr-2 h-4 w-4" />
-                          Import Video
-                        </span>
-                      </Button>
-                    </label>
-                  </div>
-                )}
-              </CardContent>
-              {videoSrc && (
-                <CardFooter className="flex flex-col gap-4">
-                  <div className="flex w-full gap-2 justify-between">
-                    {!activeTimestamp ? (
-                      <Button
-                        onClick={handleStartTimestamp}
-                        className="bg-indigo-600 hover:bg-indigo-700 text-white dark:bg-indigo-700 dark:hover:bg-indigo-600"
-                      >
-                        <Clock className="mr-2 h-4 w-4" />
-                        Start Recording
-                      </Button>
-                    ) : (
-                      <Button
-                        onClick={handleEndTimestamp}
-                        variant="secondary"
-                        className="bg-rose-100 text-rose-700 hover:bg-rose-200 dark:bg-rose-900/50 dark:text-rose-400 dark:hover:bg-rose-800/70"
-                      >
-                        <Clock className="mr-2 h-4 w-4" />
-                        End Recording
-                      </Button>
-                    )}
 
-                    <p className="text-sm text-zinc-600 dark:text-zinc-400 self-center">
+                    <div className="flex flex-wrap gap-2">
                       {activeTimestamp ? (
-                        <Badge
-                          variant="outline"
-                          className="bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400 dark:border-rose-800"
+                        <Button
+                          onClick={handleEndTimestamp}
+                          className="bg-rose-600 hover:bg-rose-700 text-white dark:bg-rose-700 dark:hover:bg-rose-600"
                         >
-                          Recording in progress...
-                        </Badge>
+                          End Recording
+                        </Button>
                       ) : (
-                        "Click to start recording a timestamp"
+                        <Button
+                          onClick={handleStartTimestamp}
+                          className="bg-indigo-600 hover:bg-indigo-700 text-white dark:bg-indigo-700 dark:hover:bg-indigo-600"
+                        >
+                          Start Recording
+                        </Button>
                       )}
-                    </p>
+
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setVideoSrc(null)
+                          setTimestamps([])
+                          setActiveTimestamp(null)
+                        }}
+                      >
+                        Change Video
+                      </Button>
+                    </div>
                   </div>
 
-                  {!browserSupport.captureStream && (
-                    <Alert variant="destructive" className="mt-2">
-                      <AlertTriangle className="h-4 w-4" />
-                      <AlertTitle>Browser compatibility issue</AlertTitle>
-                      <AlertDescription>
-                        Your browser doesn't support video capture. Clip extraction will not work. Please try Chrome or
-                        Firefox.
-                      </AlertDescription>
-                    </Alert>
-                  )}
-                </CardFooter>
+                  <div className="space-y-2">
+                    <h3 className="text-sm font-medium text-zinc-800 dark:text-zinc-200">Timestamps</h3>
+                    <TimestampList
+                      timestamps={timestamps}
+                      onLabelChange={updateTimestampLabel}
+                      onDelete={deleteTimestamp}
+                      onSeek={seekToTime}
+                      activeTimestamp={activeTimestamp}
+                      onExtractClip={prepareClipExtraction}
+                    />
+                  </div>
+                </>
               )}
-            </Card>
-
-            <Card className="border-zinc-200 bg-white/90 backdrop-blur-sm shadow-sm dark:border-zinc-800 dark:bg-zinc-900/90">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-zinc-800 dark:text-zinc-200">Timestamps</CardTitle>
-                <CardDescription className="text-zinc-600 dark:text-zinc-400">
-                  {timestamps.length > 0
-                    ? "Click on a timestamp to jump to that point in the video"
-                    : "No timestamps recorded yet"}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <TimestampList
-                  timestamps={timestamps}
-                  onLabelChange={updateTimestampLabel}
-                  onDelete={deleteTimestamp}
-                  onSeek={seekToTime}
-                  activeTimestamp={activeTimestamp}
-                  onExtractClip={prepareClipExtraction}
-                />
-              </CardContent>
-            </Card>
-          </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="extract" className="mt-0">
@@ -794,22 +773,24 @@ export function VideoTimestampTool() {
                         </RadioGroup>
                       </div>
 
-                      <Button
-                        onClick={extractAllClips}
-                        disabled={isExtractingAll || timestamps.filter((t) => t.endTime !== null).length === 0}
-                        className="w-full bg-indigo-600 hover:bg-indigo-700 text-white dark:bg-indigo-700 dark:hover:bg-indigo-600"
-                      >
-                        {isExtractingAll ? (
-                          <>
-                            Extracting {extractionProgress.current}/{extractionProgress.total}...
-                          </>
-                        ) : (
-                          <>
-                            <Download className="mr-2 h-4 w-4" />
-                            Extract All Clips
-                          </>
-                        )}
-                      </Button>
+                      <PremiumFeature requiredTier="pro">
+                        <Button
+                          onClick={extractAllClips}
+                          disabled={isExtractingAll || timestamps.filter((t) => t.endTime !== null).length === 0}
+                          className="w-full bg-indigo-600 hover:bg-indigo-700 text-white dark:bg-indigo-700 dark:hover:bg-indigo-600"
+                        >
+                          {isExtractingAll ? (
+                            <>
+                              Extracting {extractionProgress.current}/{extractionProgress.total}...
+                            </>
+                          ) : (
+                            <>
+                              <Download className="mr-2 h-4 w-4" />
+                              Extract All Clips
+                            </>
+                          )}
+                        </Button>
+                      </PremiumFeature>
 
                       {isExtractingAll && (
                         <div className="mt-2">

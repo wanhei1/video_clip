@@ -4,7 +4,11 @@ import { Geist, Geist_Mono } from "next/font/google"
 import "./globals.css"
 import { Toaster } from "@/components/ui/toaster"
 import { ThemeProvider } from "@/components/theme-provider"
+import { UserProvider } from "@/contexts/user-context"
 import { Analytics } from "@vercel/analytics/react"
+
+
+import { SessionProvider } from "@/components/session-provider"
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -17,8 +21,11 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: "ClipApp - Video Timestamp Tool",
-  description: "Record timestamps and extract clips from your videos with ease",
+  title: "Video Clipper - Professional Video Timestamp Tool",
+  description: "Record timestamps and extract high-quality clips from your videos with precision",
+  icons: {
+    icon: "/favicon.ico",
+  },
     generator: 'v0.dev'
 }
 
@@ -31,9 +38,13 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-          {children}
-          <Analytics />
-          <Toaster />
+          <SessionProvider>
+            <UserProvider>
+              {children}
+              <Analytics />
+              <Toaster />
+            </UserProvider>
+          </SessionProvider>
         </ThemeProvider>
       </body>
     </html>

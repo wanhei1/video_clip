@@ -1,0 +1,8 @@
+<svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+  <path d="M0 0h40v40H0V0zm1 1v38h38V1H1z" fill="currentColor" fill-opacity="0.1" />
+  <path d="M0 0h20v20H0V0zm1 1v18h18V1H1z" fill="currentColor" fill-opacity="0.1" />
+  <path d="M20 0h20v20H20V0zm1 1v18h18V1H21z" fill="currentColor" fill-opacity="0.1" />
+  <path d="M0 20h20v20H0V20zm1 1v18h18V21H1z" fill="currentColor" fill-opacity="0.1" />
+  <path d="M20 20h20v20H20V20zm1 1v18h18V21H21z" fill="currentColor" fill-opacity="0.1" />
+</svg>
+
