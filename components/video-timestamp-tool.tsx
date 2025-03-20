@@ -183,13 +183,35 @@ export function VideoTimestampTool() {
     }
   }, [])
 
+  // 更新用户统计数据的函数
+  const updateUserStats = useCallback(async (stats: { videosProcessed?: number; clipsCreated?: number }) => {
+    try {
+      const response = await fetch('/api/user-stats', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(stats),
+      })
+
+      if (!response.ok) {
+        console.error('Failed to update user stats')
+      }
+    } catch (error) {
+      console.error('Error updating user stats:', error)
+    }
+  }, [])
+
   const handleVideoFile = useCallback((file: File) => {
     const url = URL.createObjectURL(file)
     setVideoSrc(url)
     setVideoName(file.name.replace(/\.[^/.]+$/, "")) // Remove extension
     setTimestamps([])
     setActiveTimestamp(null)
-  }, [])
+
+    // 更新视频处理计数
+    updateUserStats({ videosProcessed: 1 })
+  }, [updateUserStats])
 
   const handleFileChange = useCallback(
     (e: ChangeEvent<HTMLInputElement>) => {
@@ -337,6 +359,9 @@ export function VideoTimestampTool() {
           title: "Clip extracted",
           description: `Clip saved as ${clipName}.${fileExtension}`,
         })
+
+        // 更新剪辑创建计数
+        updateUserStats({ clipsCreated: 1 })
       }
 
       // Start recording
@@ -364,7 +389,7 @@ export function VideoTimestampTool() {
         variant: "destructive",
       })
     }
-  }, [selectedTimestamp, timestamps, clipName])
+  }, [selectedTimestamp, timestamps, clipName, updateUserStats])
 
   // Modify the extractAllClips function to check for Pro access
   const extractAllClips = useCallback(async () => {
@@ -483,6 +508,12 @@ export function VideoTimestampTool() {
           title: "All clips extracted",
           description: `Successfully extracted ${clipsToExtract.length} clips as ${exportFormat.toUpperCase()}.`,
         })
+
+        // 更新剪辑创建计数
+        updateUserStats({ clipsCreated: clipsToExtract.length })
+
+        // 更新剪辑创建计数
+        updateUserStats({ clipsCreated: clipsToExtract.length })
       }
     } catch (error) {
       console.error("Error extracting clips:", error)

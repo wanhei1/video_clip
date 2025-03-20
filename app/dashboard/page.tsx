@@ -487,13 +487,40 @@ function SubscriptionCard({ tier }: { tier: string }) {
 }
 
 function StatsCard() {
+  const [stats, setStats] = useState({ videosProcessed: 0, clipsCreated: 0 })
+  const [isLoading, setIsLoading] = useState(true)
+  const { data: session } = useSession()
+
+  // 获取用户统计数据
+  useEffect(() => {
+    async function fetchUserStats() {
+      if (session?.user) {
+        try {
+          setIsLoading(true)
+          const response = await fetch('/api/user-stats')
+
+          if (response.ok) {
+            const data = await response.json()
+            setStats(data)
+          }
+        } catch (error) {
+          console.error('Error fetching user stats:', error)
+        } finally {
+          setIsLoading(false)
+        }
+      }
+    }
+
+    fetchUserStats()
+  }, [session])
+
   return (
     <Card className="border-zinc-200/50 bg-white/90 backdrop-blur-sm shadow-sm dark:border-zinc-800/50 dark:bg-zinc-900/90 overflow-hidden hover:shadow-md transition-all">
       <div className="absolute inset-0 rounded-lg p-[1px] bg-gradient-to-r from-indigo-500/10 to-purple-500/10 pointer-events-none"></div>
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2">
           <span>Your Stats</span>
-          <div className="h-1.5 w-1.5 rounded-full bg-indigo-500 animate-pulse"></div>
+          {isLoading && <div className="h-1.5 w-1.5 rounded-full bg-indigo-500 animate-pulse"></div>}
         </CardTitle>
         <CardDescription>Track your usage and activity.</CardDescription>
       </CardHeader>
@@ -501,13 +528,13 @@ function StatsCard() {
         <div className="grid grid-cols-2 gap-4">
           <div className="text-center p-4 rounded-lg bg-gradient-to-br from-indigo-50 to-indigo-100 dark:from-indigo-900/20 dark:to-indigo-900/10 group hover:from-indigo-100 hover:to-indigo-200 dark:hover:from-indigo-900/30 dark:hover:to-indigo-900/40 transition-all">
             <p className="text-2xl font-bold text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform">
-              0
+              {stats.videosProcessed}
             </p>
             <p className="text-xs text-indigo-700 dark:text-indigo-300">Videos Processed</p>
           </div>
           <div className="text-center p-4 rounded-lg bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-900/10 group hover:from-purple-100 hover:to-purple-200 dark:hover:from-purple-900/30 dark:hover:to-purple-900/40 transition-all">
             <p className="text-2xl font-bold text-purple-600 dark:text-purple-400 group-hover:scale-110 transition-transform">
-              0
+              {stats.clipsCreated}
             </p>
             <p className="text-xs text-purple-700 dark:text-purple-300">Clips Created</p>
           </div>
