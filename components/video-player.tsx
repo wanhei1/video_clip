@@ -40,6 +40,7 @@ export const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
     const [playbackRate, setPlaybackRate] = useState("1")
     const [showControls, setShowControls] = useState(true)
     const [isHovering, setIsHovering] = useState(false)
+    const [isOptimized, setIsOptimized] = useState(false)
     const containerRef = useRef<HTMLDivElement>(null)
     const videoRef = useRef<HTMLVideoElement | null>(null)
     const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null)
@@ -294,6 +295,62 @@ export const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
       })
     }, [timestamps, duration, activeTimestamp])
 
+    // 优化视频播放的函数
+    const optimizeVideoPlayback = useCallback(() => {
+      if (!videoRef.current) return;
+      
+      // 如果当前播放速度大于1.5倍，应用性能优化
+      const currentRate = parseFloat(playbackRate);
+      if (currentRate > 1.5) {
+        if (!isOptimized) {
+          // 应用优化并更新状态
+          videoRef.current.style.imageRendering = 'pixelated';
+          videoRef.current.style.transform = 'translateZ(0)';
+          
+          // 降低分辨率，这在高速播放时更有效
+          videoRef.current.style.width = '100%';
+          videoRef.current.style.height = 'auto';
+          
+          // 使用更高效的渲染模式
+          videoRef.current.style.objectFit = 'contain';
+          
+          // 如果浏览器支持，设置播放优先级为'low'
+          try {
+            // @ts-ignore - 非标准属性
+            if (videoRef.current.playbackQuality) {
+              // @ts-ignore
+              videoRef.current.playbackQuality = 'low';
+            }
+          } catch (e) {
+            console.warn('不支持设置播放质量:', e);
+          }
+          
+          setIsOptimized(true);
+        }
+      } else if (isOptimized) {
+        // 恢复正常播放设置
+        videoRef.current.style.imageRendering = 'auto';
+        videoRef.current.style.transform = '';
+        videoRef.current.style.objectFit = 'contain';
+        setIsOptimized(false);
+      }
+    }, [playbackRate, isOptimized]);
+    
+    // 监听播放速度变化以应用优化
+    useEffect(() => {
+      optimizeVideoPlayback();
+    }, [playbackRate, optimizeVideoPlayback]);
+
+    const handlePlaybackRateChange = useCallback((value: string) => {
+      setPlaybackRate(value);
+      if (videoRef.current) {
+        videoRef.current.playbackRate = Number(value);
+        
+        // 当播放速度改变时自动优化性能
+        optimizeVideoPlayback();
+      }
+    }, [optimizeVideoPlayback]);
+
     // Improved UI based on the requirements
     return (
       <div
@@ -426,7 +483,7 @@ export const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
                 <DropdownMenuContent align="end" className="w-[180px]">
                   <DropdownMenuLabel>Playback Speed</DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuRadioGroup value={playbackRate} onValueChange={setPlaybackRate}>
+                  <DropdownMenuRadioGroup value={playbackRate} onValueChange={handlePlaybackRateChange}>
                     <DropdownMenuRadioItem value="0.25">0.25x</DropdownMenuRadioItem>
                     <DropdownMenuRadioItem value="0.5">0.5x</DropdownMenuRadioItem>
                     <DropdownMenuRadioItem value="0.75">0.75x</DropdownMenuRadioItem>

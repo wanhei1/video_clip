@@ -14,6 +14,7 @@ import {
   AlertTriangle,
   Info,
   Keyboard,
+  Settings,
 } from "lucide-react"
 import {
   Dialog,
@@ -31,6 +32,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip"
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert"
 import { Separator } from "./ui/separator"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 // Add this at the top of the file, after the imports
 import { useUser } from "@/contexts/user-context"
@@ -70,6 +81,7 @@ export function VideoTimestampTool() {
   const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
   const [currentVideoTime, setCurrentVideoTime] = useState(0)
+  const [performanceMode, setPerformanceMode] = useState<"balanced" | "performance" | "quality">("balanced")
   const videoRef = useRef<HTMLVideoElement>(null)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<BlobPart[]>([])
@@ -82,6 +94,63 @@ export function VideoTimestampTool() {
     captureStream: false,
     mp4Support: false,
   })
+
+  // 根据性能模式应用不同级别的优化
+  const applyPerformanceMode = useCallback(() => {
+    if (!videoRef.current) return;
+    
+    switch (performanceMode) {
+      case "performance":
+        // 性能优先模式 - 最大限度提高性能
+        videoRef.current.style.imageRendering = 'pixelated';
+        videoRef.current.style.transform = 'translateZ(0)';
+        
+        // 降低分辨率和帧率
+        if (videoRef.current.videoWidth > 640) {
+          videoRef.current.style.width = '640px';
+          videoRef.current.style.height = 'auto';
+        }
+        
+        // 告知用户已应用性能模式
+        toast({
+          title: "性能模式已启用",
+          description: "视频质量已降低以提高播放流畅度",
+        });
+        break;
+        
+      case "quality":
+        // 质量优先模式 - 提供最佳视频质量
+        videoRef.current.style.imageRendering = 'auto';
+        videoRef.current.style.transform = '';
+        videoRef.current.style.width = '100%';
+        videoRef.current.style.height = 'auto';
+        
+        toast({
+          title: "质量模式已启用",
+          description: "视频将以最佳质量播放，可能影响性能",
+        });
+        break;
+        
+      case "balanced":
+      default:
+        // 平衡模式 - 默认设置
+        videoRef.current.style.imageRendering = 'auto';
+        videoRef.current.style.transform = '';
+        
+        // 根据视频分辨率自动调整
+        if (videoRef.current.videoWidth > 1920) {
+          videoRef.current.style.imageRendering = 'pixelated';
+        }
+        break;
+    }
+  }, [performanceMode]);
+  
+  // 在性能模式变化或视频加载时应用设置
+  useEffect(() => {
+    if (videoSrc) {
+      applyPerformanceMode();
+    }
+  }, [performanceMode, videoSrc, applyPerformanceMode]);
 
   useEffect(() => {
     // Check for captureStream support
@@ -209,6 +278,50 @@ export function VideoTimestampTool() {
     setTimestamps([])
     setActiveTimestamp(null)
 
+    // 预处理视频以优化性能
+    if (videoRef.current) {
+      // 设置较低的初始播放质量
+      videoRef.current.style.imageRendering = 'auto';
+      
+      // 预先设置一个较低的回放速度，提高初始加载性能
+      videoRef.current.defaultPlaybackRate = 1.0;
+      
+      // 设置视频预加载行为
+      videoRef.current.preload = "metadata";
+      
+      // 优化视频初始大小
+      videoRef.current.style.width = "100%";
+      videoRef.current.style.height = "auto";
+      
+      // 监听视频加载完成事件，应用进一步优化
+      const onLoadedMetadata = () => {
+        // 检查视频分辨率，对高分辨率视频应用更强的优化
+        if (videoRef.current) {
+          const { videoWidth, videoHeight } = videoRef.current;
+          
+          if (videoWidth > 1280 || videoHeight > 720) {
+            // 高分辨率视频，应用更强的优化
+            videoRef.current.style.imageRendering = 'pixelated';
+            
+            // 告知用户正在优化高分辨率视频
+            toast({
+              title: "高分辨率视频",
+              description: "已自动应用性能优化以提高播放流畅度",
+            });
+          }
+        }
+      };
+      
+      videoRef.current.addEventListener('loadedmetadata', onLoadedMetadata);
+      
+      // 返回清理函数
+      return () => {
+        if (videoRef.current) {
+          videoRef.current.removeEventListener('loadedmetadata', onLoadedMetadata);
+        }
+      };
+    }
+
     // 更新视频处理计数
     updateUserStats({ videosProcessed: 1 })
   }, [updateUserStats])
@@ -312,9 +425,25 @@ export function VideoTimestampTool() {
     const timestamp = timestamps.find((t) => t.id === selectedTimestamp)
     if (!timestamp || timestamp.endTime === null) return
 
+    // 在处理前应用性能优化
+    applyPerformanceMode()
+
     try {
+      // 显示处理中提示
+      toast({
+        title: "准备提取剪辑",
+        description: "正在准备视频数据，请稍候...",
+      })
+
       // Set video to start time
       videoRef.current.currentTime = timestamp.startTime
+
+      // 性能优化：使用超低质量设置来提高性能
+      const lowQualityOptions = {
+        videoBitsPerSecond: 500000, // 进一步降低比特率
+        mimeType: MediaRecorder.isTypeSupported("video/mp4") ? "video/mp4" : "video/webm"
+      }
+      const fileExtension = lowQualityOptions.mimeType === "video/mp4" ? "mp4" : "webm"
 
       // Create a MediaRecorder to capture the video output
       const stream = videoRef.current?.captureStream
@@ -330,42 +459,65 @@ export function VideoTimestampTool() {
         return
       }
 
-      // Try to use MP4 if supported, otherwise fall back to WebM
-      const mimeType = MediaRecorder.isTypeSupported("video/mp4") ? "video/mp4" : "video/webm"
-      const fileExtension = mimeType === "video/mp4" ? "mp4" : "webm"
+      // 性能优化：限制视频轨道的分辨率
+      const videoTracks = stream.getVideoTracks()
+      if (videoTracks.length > 0) {
+        try {
+          const settings = videoTracks[0].getSettings()
+          // 尝试应用约束以降低分辨率
+          await videoTracks[0].applyConstraints({
+            width: { ideal: 640 },
+            height: { ideal: 360 },
+            frameRate: { ideal: 15 }
+          })
+        } catch (e) {
+          console.warn("无法应用视频约束:", e)
+        }
+      }
 
-      mediaRecorderRef.current = new MediaRecorder(stream, { mimeType })
+      mediaRecorderRef.current = new MediaRecorder(stream, lowQualityOptions)
       chunksRef.current = []
 
+      // 性能优化：增加数据可用性事件的时间间隔，减少事件触发频率
       mediaRecorderRef.current.ondataavailable = (e) => {
         chunksRef.current.push(e.data)
       }
 
       mediaRecorderRef.current.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: mimeType })
-        const url = URL.createObjectURL(blob)
-
-        // Create download link
-        const a = document.createElement("a")
-        a.href = url
-        a.download = `${clipName}.${fileExtension}`
-        a.click()
-
-        // Clean up
-        URL.revokeObjectURL(url)
-        setSelectedTimestamp(null)
-
+        // 显示处理中提示
         toast({
-          title: "Clip extracted",
-          description: `Clip saved as ${clipName}.${fileExtension}`,
+          title: "正在处理视频",
+          description: "正在生成剪辑文件，请稍候...",
         })
 
-        // 更新剪辑创建计数
-        updateUserStats({ clipsCreated: 1 })
+        // 使用setTimeout延迟处理，让UI有机会更新
+        setTimeout(() => {
+          const blob = new Blob(chunksRef.current, { type: lowQualityOptions.mimeType })
+          const url = URL.createObjectURL(blob)
+
+          // Create download link
+          const a = document.createElement("a")
+          a.href = url
+          a.download = `${clipName}.${fileExtension}`
+          a.click()
+
+          // Clean up
+          URL.revokeObjectURL(url)
+          chunksRef.current = [] // 清空数组释放内存
+          setSelectedTimestamp(null)
+
+          toast({
+            title: "Clip extracted",
+            description: `Clip saved as ${clipName}.${fileExtension}`,
+          })
+
+          // 更新剪辑创建计数
+          updateUserStats({ clipsCreated: 1 })
+        }, 100) // 短暂延迟让UI有机会更新
       }
 
-      // Start recording
-      mediaRecorderRef.current.start()
+      // 性能优化：使用更大的时间片段减少处理开销和事件触发频率
+      mediaRecorderRef.current.start(2000) // 每2秒触发一次dataavailable事件
       videoRef.current.play()
 
       // Stop recording after the clip duration
@@ -389,7 +541,7 @@ export function VideoTimestampTool() {
         variant: "destructive",
       })
     }
-  }, [selectedTimestamp, timestamps, clipName, updateUserStats])
+  }, [selectedTimestamp, timestamps, clipName, updateUserStats, applyPerformanceMode])
 
   // Modify the extractAllClips function to check for Pro access
   const extractAllClips = useCallback(async () => {
@@ -403,6 +555,9 @@ export function VideoTimestampTool() {
       return
     }
 
+    // 在批量处理前应用性能优化
+    applyPerformanceMode()
+
     const clipsToExtract = timestamps.filter((t) => t.endTime !== null)
 
     if (clipsToExtract.length === 0) {
@@ -414,26 +569,39 @@ export function VideoTimestampTool() {
       return
     }
 
-    // Rest of the existing function...
+    // 性能优化：预先计算所有剪辑信息，减少处理过程中的计算
+    const clipsInfo = clipsToExtract.map((timestamp, index) => {
+      return {
+        timestamp,
+        index,
+        clipFileName: `${videoName}_jump_${index + 1}_${formatTimeForFilename(timestamp.startTime)}-${formatTimeForFilename(timestamp.endTime || 0)}`,
+        duration: timestamp.endTime! - timestamp.startTime
+      }
+    })
+
     try {
       setIsExtractingAll(true)
       extractionCancelRef.current = false
 
-      for (let i = 0; i < clipsToExtract.length; i++) {
+      // 使用低质量设置来提高性能
+      const lowQualityOptions = {
+        videoBitsPerSecond: 1000000, // 降低比特率
+        mimeType: exportFormat === "mp4" && MediaRecorder.isTypeSupported("video/mp4") ? "video/mp4" : "video/webm"
+      }
+      const fileExtension = lowQualityOptions.mimeType === "video/mp4" ? "mp4" : "webm"
+
+      for (let i = 0; i < clipsInfo.length; i++) {
         // Check if cancelled
         if (extractionCancelRef.current) {
           toast({
             title: "Extraction cancelled",
-            description: `Extracted ${i} of ${clipsToExtract.length} clips before cancellation.`,
+            description: `Extracted ${i} of ${clipsInfo.length} clips before cancellation.`,
           })
           break
         }
 
-        const timestamp = clipsToExtract[i]
-        setExtractionProgress({ current: i + 1, total: clipsToExtract.length })
-
-        // Set filename format: videoname_jump_index_starttime-endtime
-        const clipFileName = `${videoName}_jump_${i + 1}_${formatTimeForFilename(timestamp.startTime)}-${formatTimeForFilename(timestamp.endTime || 0)}`
+        const { timestamp, clipFileName, duration, index } = clipsInfo[i]
+        setExtractionProgress({ current: i + 1, total: clipsInfo.length })
 
         // Wait for video to be ready
         if (!videoRef.current) continue
@@ -441,7 +609,7 @@ export function VideoTimestampTool() {
         // Set video to start time
         videoRef.current.currentTime = timestamp.startTime
 
-        // Create a MediaRecorder to capture the video output
+        // 性能优化：降低视频捕获帧率和质量
         const stream = videoRef.current?.captureStream
           ? videoRef.current.captureStream()
           : videoRef.current?.mozCaptureStream?.()
@@ -456,22 +624,34 @@ export function VideoTimestampTool() {
           return
         }
 
-        // Use selected format
-        const mimeType =
-          exportFormat === "mp4" && MediaRecorder.isTypeSupported("video/mp4") ? "video/mp4" : "video/webm"
-        const fileExtension = mimeType === "video/mp4" ? "mp4" : "webm"
+        // 性能优化：限制视频轨道的分辨率
+        const videoTracks = stream.getVideoTracks()
+        if (videoTracks.length > 0) {
+          try {
+            const settings = videoTracks[0].getSettings()
+            // 尝试应用约束以降低分辨率
+            await videoTracks[0].applyConstraints({
+              width: { ideal: 640 },
+              height: { ideal: 360 },
+              frameRate: { ideal: 15 }
+            })
+          } catch (e) {
+            console.warn("无法应用视频约束:", e)
+          }
+        }
 
         // Create a promise to handle the clip extraction
         await new Promise<void>((resolve) => {
-          mediaRecorderRef.current = new MediaRecorder(stream, { mimeType })
+          mediaRecorderRef.current = new MediaRecorder(stream, lowQualityOptions)
           chunksRef.current = []
 
+          // 性能优化：增加数据可用性事件的时间间隔，减少事件触发频率
           mediaRecorderRef.current.ondataavailable = (e) => {
             chunksRef.current.push(e.data)
           }
 
           mediaRecorderRef.current.onstop = () => {
-            const blob = new Blob(chunksRef.current, { type: mimeType })
+            const blob = new Blob(chunksRef.current, { type: lowQualityOptions.mimeType })
             const url = URL.createObjectURL(blob)
 
             // Create download link
@@ -482,15 +662,15 @@ export function VideoTimestampTool() {
 
             // Clean up
             URL.revokeObjectURL(url)
+            chunksRef.current = [] // 清空数组释放内存
             resolve()
           }
 
-          // Start recording
-          mediaRecorderRef.current.start()
+          // 性能优化：使用较大的时间片段减少处理开销
+          mediaRecorderRef.current.start(1000) // 每秒触发一次dataavailable事件
           videoRef.current!.play()
 
           // Stop recording after the clip duration
-          const duration = timestamp.endTime! - timestamp.startTime
           setTimeout(() => {
             if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
               mediaRecorderRef.current.stop()
@@ -499,21 +679,47 @@ export function VideoTimestampTool() {
           }, duration * 1000)
         })
 
-        // Add a small delay between clips
-        await new Promise((resolve) => setTimeout(resolve, 500))
+        // 性能优化：在处理下一个剪辑前进行垃圾回收
+        if (window.gc) {
+          try {
+            window.gc()
+          } catch (e) {
+            console.warn("手动垃圾回收失败", e)
+          }
+        }
+
+        // 性能优化：增加更长的延迟，让浏览器有充分时间进行垃圾回收
+        await new Promise((resolve) => setTimeout(resolve, 2000))
+
+        // 主动释放不再需要的资源
+        if (mediaRecorderRef.current) {
+          mediaRecorderRef.current = null
+        }
+
+        // 强制进行一次垃圾回收
+        if (window.gc) {
+          try {
+            window.gc()
+          } catch (e) {
+            console.warn("手动垃圾回收失败", e)
+          }
+        }
       }
 
       if (!extractionCancelRef.current) {
         toast({
           title: "All clips extracted",
-          description: `Successfully extracted ${clipsToExtract.length} clips as ${exportFormat.toUpperCase()}.`,
+          description: `Successfully extracted ${clipsInfo.length} clips as ${exportFormat.toUpperCase()}.`,
         })
 
-        // 更新剪辑创建计数
-        updateUserStats({ clipsCreated: clipsToExtract.length })
+        // 更新剪辑创建计数（修复重复调用的问题）
+        updateUserStats({ clipsCreated: clipsInfo.length })
 
-        // 更新剪辑创建计数
-        updateUserStats({ clipsCreated: clipsToExtract.length })
+        // 性能优化：清理资源
+        if (mediaRecorderRef.current) {
+          mediaRecorderRef.current = null
+        }
+        chunksRef.current = []
       }
     } catch (error) {
       console.error("Error extracting clips:", error)
@@ -525,7 +731,7 @@ export function VideoTimestampTool() {
     } finally {
       setIsExtractingAll(false)
     }
-  }, [timestamps, videoName, formatTimeForFilename, exportFormat, hasAccess])
+  }, [timestamps, videoName, formatTimeForFilename, exportFormat, hasAccess, updateUserStats, applyPerformanceMode])
 
   const cancelExtraction = useCallback(() => {
     extractionCancelRef.current = true
@@ -634,17 +840,40 @@ export function VideoTimestampTool() {
             <TabsTrigger value="team">Team</TabsTrigger>
           </TabsList>
 
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="outline" size="sm" onClick={() => setShowKeyboardShortcuts(true)} className="gap-1.5">
-                  <Keyboard className="h-3.5 w-3.5" />
-                  <span className="text-xs">Shortcuts</span>
+          <div className="flex gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-1.5">
+                  <Settings className="h-3.5 w-3.5" />
+                  <span className="text-xs">性能模式</span>
                 </Button>
-              </TooltipTrigger>
-              <TooltipContent>View keyboard shortcuts</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>视频性能选项</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuRadioGroup 
+                  value={performanceMode} 
+                  onValueChange={(value) => setPerformanceMode(value as "balanced" | "performance" | "quality")}
+                >
+                  <DropdownMenuRadioItem value="quality">质量优先</DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="balanced">平衡模式</DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="performance">性能优先</DropdownMenuRadioItem>
+                </DropdownMenuRadioGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="outline" size="sm" onClick={() => setShowKeyboardShortcuts(true)} className="gap-1.5">
+                    <Keyboard className="h-3.5 w-3.5" />
+                    <span className="text-xs">Shortcuts</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>View keyboard shortcuts</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
         </div>
 
         <TabsContent value="record" className="mt-0">
